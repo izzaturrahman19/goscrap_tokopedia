@@ -52,7 +52,7 @@ func writeCSV(data []string) {
 	fmt.Println("Write to CSV success")
 }
 
-func scrapePageData(doc *goquery.Document) Product {
+func scrapeChildPageData(doc *goquery.Document) Product {
 	product := Product{
 		Name:        doc.Find("h1[data-testid='lblPDPDetailProductName']").Text(),
 		Description: doc.Find("div[data-testid='lblPDPDescriptionProduk']").Text(),
@@ -64,7 +64,8 @@ func scrapePageData(doc *goquery.Document) Product {
 	return product
 }
 
-func getProductsUrl(doc *goquery.Document) (urls []string) {
+func scrapePageData(doc *goquery.Document, lastCount int) (count int) {
+	count = lastCount
 	doc.Find("div[data-testid='lstCL2ProductList']>div").Each(func(i int, s *goquery.Selection) {
 		resp := getHtml(s.Find("a").AttrOr("href", "no url"))
 		defer resp.Body.Close()
@@ -72,26 +73,38 @@ func getProductsUrl(doc *goquery.Document) (urls []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		product := scrapePageData(childDoc)
+		product := scrapeChildPageData(childDoc)
 		fmt.Println(product)
 
 		// write to csv
 		header := []string{"Name", "Description", "Price", "Merchant", "Rating", "ImageLink"}
-		writeCSV(append(header, []string{product.Name, product.Description, product.Price, product.Merchant, product.Rating, product.ImageLink}...))
+		if count == 0 {
+			writeCSV(append(header, []string{product.Name, product.Description, product.Price, product.Merchant, product.Rating, product.ImageLink}...))
+		} else {
+			writeCSV([]string{product.Name, product.Description, product.Price, product.Merchant, product.Rating, product.ImageLink})
+		}
+		count++
 	})
 
-	return urls
+	return count
 }
 
 func main() {
 	url := "https://www.tokopedia.com/p/handphone-tablet/handphone"
-	resp := getHtml(url)
-	defer resp.Body.Close()
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+	pageNumber := 1
+	count := 0
+	for {
+		resp := getHtml(url)
+		defer resp.Body.Close()
+		doc, err := goquery.NewDocumentFromReader(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		count = scrapePageData(doc, count)
+		if count == 100 {
+			break
+		}
+		pageNumber++
+		url = "https://www.tokopedia.com/p/handphone-tablet/handphone" + "?page=" + fmt.Sprint(pageNumber)
 	}
-	productListUrl := getProductsUrl(doc)
-	fmt.Println("productListUrl : ", len(productListUrl))
 }
