@@ -74,10 +74,10 @@ func getProductsUrl(doc *goquery.Document) (urls []string) {
 		}
 		product := scrapePageData(childDoc)
 		fmt.Println(product)
-		// csv header
 
 		// write to csv
-		writeCSV([]string{product.Name, product.Description, product.Price, product.Merchant, product.Rating, product.ImageLink})
+		header := []string{"Name", "Description", "Price", "Merchant", "Rating", "ImageLink"}
+		writeCSV(append(header, []string{product.Name, product.Description, product.Price, product.Merchant, product.Rating, product.ImageLink}...))
 	})
 
 	return urls
