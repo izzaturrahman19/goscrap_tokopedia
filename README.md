@@ -1,1 +1,5 @@
-# goscrap_tokopedia
+### How to run :
+
+```
+go run main.go
+```
